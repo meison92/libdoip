@@ -34,3 +34,4 @@ runTest
 
 # Folder
 build/
+.vscode/
