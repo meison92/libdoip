@@ -238,7 +238,7 @@ int DoIPServer::sendVehicleAnnouncement() {
     }
     
     int socketError = setsockopt(server_socket_udp, SOL_SOCKET, SO_BROADCAST, &broadcast, sizeof(broadcast) );
-         
+
     if(socketError == 0)
     {
         std::cout << "Broadcast Option set successfully" << std::endl;

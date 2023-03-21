@@ -26,7 +26,7 @@ void DoIPConnection::closeSocket() {
  *              or -1 if error occurred     
  */
 int DoIPConnection::receiveTcpMessage() {
-    std::cout << "Waiting for DoIP Header..." << std::endl;
+    std::cout << "\n==========Waiting for DoIP Header...==========" << std::endl;
     unsigned char genericHeader[_GenericHeaderLength];
     unsigned int readBytes = receiveFixedNumberOfBytesFromTCP(_GenericHeaderLength, genericHeader);
     if(readBytes == _GenericHeaderLength && !aliveCheckTimer.timeout) {
@@ -39,6 +39,7 @@ int DoIPConnection::receiveTcpMessage() {
             payload = new unsigned char[doipHeaderAction.payloadLength];
             unsigned int receivedPayloadBytes = receiveFixedNumberOfBytesFromTCP(doipHeaderAction.payloadLength, payload);
             if(receivedPayloadBytes != doipHeaderAction.payloadLength) {
+                std::cout << "receivedPayloadBytes != doipHeaderAction.payloadLength. . Close Connection" << std::endl;
                 closeSocket();
                 return 0;
             }
@@ -54,6 +55,7 @@ int DoIPConnection::receiveTcpMessage() {
         
         return sentBytes;
     } else {
+        std::cout << "Receive " << readBytes << " bytes" << std::endl;
         closeSocket();
         return 0;
     }
@@ -111,6 +113,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
 
         case PayloadType::ROUTINGACTIVATIONREQUEST: {
             //start routing activation handler with the received message
+            std::cout << "parse routing activation Message" << std::endl;
             unsigned char result = parseRoutingActivation(payload);
             unsigned char clientAddress [2] = {payload[0], payload[1]};
 
@@ -118,6 +121,7 @@ int DoIPConnection::reactOnReceivedTcpMessage(GenericHeaderAction action, unsign
             sentBytes = sendMessage(message, _GenericHeaderLength + _ActivationResponseLength);
 
             if(result == _UnknownSourceAddressCode || result == _UnsupportedRoutingTypeCode) {
+                std::cout << "UnknownSourceAddressCode or UnsupportedRoutingTypeCode. Close Connection" << std::endl;
                 closeSocket();
                 return -1;
             } else {
@@ -174,6 +178,11 @@ void DoIPConnection::triggerDisconnection() {
  *                          or -1 if error occurred
  */
 int DoIPConnection::sendMessage(unsigned char* message, int messageLength) {
+    std::cout << "SendMessage(Doip) data: ";
+    for(int i = 0; i < messageLength; i++) {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << (unsigned int)message[i] << " ";
+    }
+    std::cout << std::endl;
     int result = write(tcpSocket, message, messageLength);
     return result;
 }
@@ -198,15 +207,10 @@ void DoIPConnection::setGeneralInactivityTime(uint16_t seconds) {
  * @param length    length of received payload
  */
 void DoIPConnection::sendDiagnosticPayload(unsigned short sourceAddress, unsigned char* data, int length) {
-
-    std::cout << "Sending diagnostic data: ";
-    for(int i = 0; i < length; i++) {
-        std::cout << std::hex << std::setw(2) << (unsigned int)data[i] << " ";
-    }
-    std::cout << std::endl;
-    
+    std::cout << "sendDiagnosticUDSPayload" << std::endl;
     unsigned char* message = createDiagnosticMessage(sourceAddress, routedClientAddress, data, length);  
     sendMessage(message, _GenericHeaderLength + _DiagnosticMessageMinimumLength + length);
+    delete []message;
 }
 
 /*
@@ -223,7 +227,7 @@ void DoIPConnection::setCallback(DiagnosticCallback dc, DiagnosticMessageNotific
 
 void DoIPConnection::sendDiagnosticAck(unsigned short sourceAddress, bool ackType, unsigned char ackCode) {
     unsigned char data_TA [2] = { routedClientAddress[0], routedClientAddress[1] };
-    
+    std::cout << "sendDiagnosticAck data: " << (int)ackCode << std::endl;
     unsigned char* message = createDiagnosticACK(ackType, sourceAddress, data_TA, ackCode);
     sendMessage(message, _GenericHeaderLength + _DiagnosticPositiveACKLength);
 }
@@ -236,6 +240,7 @@ void DoIPConnection::sendDiagnosticAck(unsigned short sourceAddress, bool ackTyp
 int DoIPConnection::sendNegativeAck(unsigned char ackCode) {
     unsigned char* message = createGenericHeader(PayloadType::NEGATIVEACK, _NACKLength);
     message[8] = ackCode;
+    std::cout << "sendNegativeAck data: " << (int)ackCode << std::endl;
     int sendedBytes = sendMessage(message, _GenericHeaderLength + _NACKLength);
     return sendedBytes;
 }
