@@ -84,20 +84,20 @@ void ReceiveFromLibrary(unsigned short sourceaddress, unsigned short targetaddre
     if(length > 2 && data[0] == 0x22)  {
         uint16_t dataId = ((uint16_t)data[1] << 8) | data[2];
         cout << "Read the dataId " << (uint32_t)dataId << ", dataRecord=" << dataRecord << endl;
-        unsigned char responseData[] = { (uint8_t)(data[0] + 0x40), data[1], data[2], (uint8_t)(dataRecord >> 24 && 0xFF),
-                                                                                      (uint8_t)(dataRecord >> 16 && 0xFF),
-                                                                                      (uint8_t)(dataRecord >> 8 && 0xFF),
-                                                                                      (uint8_t)(dataRecord && 0xFF)};
+        unsigned char responseData[] = { (uint8_t)(data[0] + 0x40), data[1], data[2], (uint8_t)(dataRecord >> 24 & 0xFF),
+                                                                                      (uint8_t)(dataRecord >> 16 & 0xFF),
+                                                                                      (uint8_t)(dataRecord >> 8 & 0xFF),
+                                                                                      (uint8_t)(dataRecord & 0xFF)};
         connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData, sizeof(responseData));
     }
     else if(length > 2 && data[0] == 0x2E)  {
         uint16_t dataId = ((uint16_t)data[1] << 8) | data[2];
-        for (int i =3; i<6; i++)
+        for (int i =3, j =3; i<7; i++,j--)
         {
-            dataRecord = ((uint16_t)data[i] << 8) | data[i+1];;
+            dataRecord = dataRecord | ((uint32_t)data[i] << (8*j));
         }
         cout << "Write the dataId " << (uint32_t)dataId << ", dataRecord=" << dataRecord << endl;
-        unsigned char responseData[] = { (uint8_t)(data[0] + 0x40), data[1] };
+        unsigned char responseData[] = { (uint8_t)(data[0] + 0x40), data[1], data[2] };
         connection->sendDiagnosticPayload(LOGICAL_ADDRESS, responseData, sizeof(responseData));
     }
     else if(length == 2 && data[0] == 0x10)  {
@@ -266,7 +266,9 @@ void listenTcp() {
     server.setupTcpSocket();
 
     while(true) {
+        cout << "waitForTcpConnection" << endl;
         connection = server.waitForTcpConnection();
+        cout << "Get one connection" << endl;
         connection->setCallback(ReceiveFromLibrary, DiagnosticMessageReceived, CloseConnection);
         connection->setGeneralInactivityTime(300);
 

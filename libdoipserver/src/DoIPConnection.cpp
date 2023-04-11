@@ -16,6 +16,7 @@ void DoIPConnection::aliveCheckTimeout() {
  * Closes the socket for this server
  */
 void DoIPConnection::closeSocket() {
+    shutdown(tcpSocket, SHUT_RDWR);  
     close(tcpSocket);
     tcpSocket = 0;
 }
